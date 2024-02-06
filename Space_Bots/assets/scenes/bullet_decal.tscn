@@ -1,0 +1,24 @@
+[gd_scene load_steps=5 format=3 uid="uid://yp30xnb1283p"]
+
+[ext_resource type="Texture2D" uid="uid://bux75a0sqius4" path="res://assets/textures/bullet-holes-png-22761.png" id="1_ki1ls"]
+[ext_resource type="Script" path="res://assets/scripts/Parent_Bullet_Decal.gd" id="1_ovlyf"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gvu7a"]
+transparency = 4
+albedo_texture = ExtResource("1_ki1ls")
+
+[sub_resource type="QuadMesh" id="QuadMesh_lc1px"]
+size = Vector2(0.1, 0.1)
+
+[node name="bullet decal" type="Node3D"]
+script = ExtResource("1_ovlyf")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, -0.006)
+material_override = SubResource("StandardMaterial3D_gvu7a")
+mesh = SubResource("QuadMesh_lc1px")
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 3.0
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

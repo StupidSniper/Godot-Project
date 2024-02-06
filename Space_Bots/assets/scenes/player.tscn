@@ -1,0 +1,65 @@
+[gd_scene load_steps=8 format=3 uid="uid://ndl871ojt8nn"]
+
+[ext_resource type="Script" path="res://assets/scripts/Player.gd" id="1_n8qif"]
+[ext_resource type="Script" path="res://assets/scripts/Player_Shoot.gd" id="2_jbafh"]
+[ext_resource type="PackedScene" uid="uid://c5cafawmkvegm" path="res://assets/scenes/revolver.tscn" id="3_y1s37"]
+[ext_resource type="PackedScene" uid="uid://cvnol3w3pfmxr" path="res://assets/scenes/player_walk_particles.tscn" id="4_vkvxf"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_mnu78"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_31gsc"]
+
+[sub_resource type="GDScript" id="GDScript_fhhqu"]
+script/source = "extends Node3D
+
+# Called when the node enters the scene tree for the first time.
+func _ready():
+	pass # Replace with function body.
+
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta):
+	pass
+"
+
+[node name="Player" type="CharacterBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+script = ExtResource("1_n8qif")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CapsuleMesh_mnu78")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_31gsc")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+
+[node name="Shooting Object" type="Node3D" parent="Head/Camera3D"]
+script = ExtResource("2_jbafh")
+
+[node name="RayCast3D" type="RayCast3D" parent="Head/Camera3D/Shooting Object"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0)
+target_position = Vector3(0, -100, 0)
+
+[node name="Firerate" type="Timer" parent="Head/Camera3D/Shooting Object"]
+wait_time = 0.25
+
+[node name="Gun Holder" type="Node3D" parent="Head/Camera3D/Shooting Object"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, -0.32294, -0.5)
+
+[node name="Revolver" parent="Head/Camera3D/Shooting Object/Gun Holder" instance=ExtResource("3_y1s37")]
+transform = Transform3D(-0.5, 0, -7.54979e-08, 0, 0.5, 0, 7.54979e-08, 0, -0.5, 0, 0, 0)
+script = SubResource("GDScript_fhhqu")
+
+[node name="Crouch Timer" type="Timer" parent="."]
+wait_time = 0.25
+
+[node name="player_walk_particles" parent="." instance=ExtResource("4_vkvxf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.979609, 0)
+emitting = false
+
+[connection signal="timeout" from="Head/Camera3D/Shooting Object/Firerate" to="Head/Camera3D/Shooting Object" method="_on_firerate_timeout"]
+[connection signal="timeout" from="Crouch Timer" to="." method="_on_crouch_timer_timeout"]

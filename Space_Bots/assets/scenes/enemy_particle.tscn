@@ -1,0 +1,46 @@
+[gd_scene load_steps=6 format=3 uid="uid://c8s28oqvhqx3m"]
+
+[ext_resource type="PackedScene" uid="uid://xw2tvwakmjm0" path="res://assets/scenes/bullet_particle.tscn" id="1_cn1rr"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nxltx"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_d3wu2"]
+emission_shape_scale = Vector3(0.02, 0.02, 0.02)
+emission_shape = 1
+emission_sphere_radius = 1.0
+direction = Vector3(0, 0, -1)
+spread = 5.0
+initial_velocity_min = 1.0
+initial_velocity_max = 2.0
+angular_velocity_max = 3.0
+gravity = Vector3(0, -2.5, 0)
+scale_min = 0.8
+scale_max = 1.2
+hue_variation_min = -0.1
+hue_variation_max = 0.1
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_o644e"]
+radius = 0.01
+height = 0.02
+radial_segments = 16
+rings = 4
+
+[sub_resource type="GDScript" id="GDScript_vm5dp"]
+script/source = "extends GPUParticles3D
+
+
+func _ready():
+	emitting = true
+	
+func _process(delta):
+	if emitting == false:
+		queue_free()
+"
+
+[node name="enemy particle" instance=ExtResource("1_cn1rr")]
+material_override = SubResource("StandardMaterial3D_nxltx")
+amount = 6
+process_material = SubResource("ParticleProcessMaterial_d3wu2")
+draw_pass_1 = SubResource("CapsuleMesh_o644e")
+script = SubResource("GDScript_vm5dp")

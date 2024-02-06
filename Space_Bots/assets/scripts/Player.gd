@@ -1,13 +1,10 @@
 extends CharacterBody3D
 
 var speed
-var speed_multiplier = 1
 const WALK_SPEED = 4.0
 const SPRINT_SPEED = 5.5
 const JUMP_VELOCITY = 4.5
 const SENSITIVITY = 0.003
-
-var powerslide_multiplier = 1.5
 
 const BOB_FREQ = 2.4
 const BOB_AMP = 0.08
@@ -24,6 +21,12 @@ var can_crouch = true
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity = 9.8
+
+var can_slide = true
+var sliding = false
+var falling = false
+var fall_distance = 0.0
+var slide_speed = 0.0
 
 var gun_pos = Vector3(0.4, -0.45, -0.5)
 
@@ -47,7 +50,11 @@ func _physics_process(delta):
 	# Add the gravity.
 	if not is_on_floor():
 		velocity.y -= gravity * delta
-
+		falling = true
+	
+	if falling and is_on_floor() and sliding:
+		slide_speed += fall_distance / 10
+	fall_distance = gravity
 	# Handle jump.
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
@@ -59,13 +66,23 @@ func _physics_process(delta):
 		
 	if Input.is_action_pressed("crouch") and can_crouch:
 		is_crouched = true
-		var can_powerslide = can_powerslide()
 	else:
 		is_crouched = false
 		
 	if Input.is_action_just_released("crouch") and can_crouch:
 		can_crouch = false
 		crouch_timer.start()
+		
+	if Input.is_action_just_pressed("crouch") and velocity.length() > 3 and can_crouch:
+		can_slide = true
+		
+	if Input.is_action_pressed("crouch") and is_on_floor() and can_crouch and can_slide:
+		if Input.is_action_pressed("up") or Input.is_action_pressed("left") or  Input.is_action_pressed("right"):
+			slide()
+		
+	if Input.is_action_just_released("crouch"):
+		can_slide = false
+		sliding = false
 		
 	if is_crouched:
 		scale.y = lerp(scale.y, CROUCHED_HEIGHT, delta * 10)
@@ -78,15 +95,14 @@ func _physics_process(delta):
 	var input_dir = Input.get_vector("left", "right", "up", "down")
 	var direction = (head.transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	
-	var is_still = is_still()
-	if !is_still && is_on_floor():
+	if !is_still() && is_on_floor():
 		player_walk_part.emitting = true
 	else:
 		player_walk_part.emitting = false
 	
 	if is_on_floor():
 		if direction:
-			velocity.x = lerp(-velocity.x, direction.x * speed, delta * 75) * speed_multiplier
+			velocity.x = lerp(-velocity.x, direction.x * speed, delta * 75)
 			velocity.z = lerp(-velocity.z, direction.z * speed, delta * 75)
 		else:
 			velocity.x = lerp(velocity.x, direction.x * speed, delta * 7)
@@ -131,5 +147,23 @@ func lerp_velocity():
 	if velocity.z < 0.05 and velocity.z > -0.05:
 		velocity.z = 0.0
 		
-func can_powerslide() -> bool:
-	return true
+func slide():
+	if not sliding:
+		if is_on_floor() or get_floor_angle() < 0.2:
+			slide_speed = 5
+			slide_speed += fall_distance / 10
+		else:
+			slide_speed = 2
+	sliding = true
+	
+	if is_on_floor():
+		slide_speed += get_floor_angle() / 10
+	else:
+		slide_speed -= get_floor_angle() / 5 + 0.03
+		
+	if slide_speed < 0:
+		slide_speed = 0
+		can_slide = false
+		sliding = false
+		
+	speed = slide_speed

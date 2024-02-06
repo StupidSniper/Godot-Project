@@ -1,10 +1,13 @@
 extends CharacterBody3D
 
 var speed
+var speed_multiplier = 1
 const WALK_SPEED = 4.0
 const SPRINT_SPEED = 5.5
 const JUMP_VELOCITY = 4.5
 const SENSITIVITY = 0.003
+
+var powerslide_multiplier = 1.5
 
 const BOB_FREQ = 2.4
 const BOB_AMP = 0.08
@@ -56,6 +59,7 @@ func _physics_process(delta):
 		
 	if Input.is_action_pressed("crouch") and can_crouch:
 		is_crouched = true
+		var can_powerslide = can_powerslide()
 	else:
 		is_crouched = false
 		
@@ -74,15 +78,15 @@ func _physics_process(delta):
 	var input_dir = Input.get_vector("left", "right", "up", "down")
 	var direction = (head.transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	
-	if velocity != Vector3.ZERO && is_on_floor():
+	var is_still = is_still()
+	if !is_still && is_on_floor():
 		player_walk_part.emitting = true
-		
 	else:
 		player_walk_part.emitting = false
 	
 	if is_on_floor():
 		if direction:
-			velocity.x = lerp(-velocity.x, direction.x * speed, delta * 75)
+			velocity.x = lerp(-velocity.x, direction.x * speed, delta * 75) * speed_multiplier
 			velocity.z = lerp(-velocity.z, direction.z * speed, delta * 75)
 		else:
 			velocity.x = lerp(velocity.x, direction.x * speed, delta * 7)
@@ -94,11 +98,13 @@ func _physics_process(delta):
 	t_bob += delta * velocity.length() * float(is_on_floor())
 	camera.transform.origin = _headbob(t_bob)
 	
-	gun.transform.origin = _headbob(t_bob)
+	gun.transform.origin = _headbob(t_bob) / 2
 	
 	var velocity_clamped = clamp(velocity.length(), 0.5, SPRINT_SPEED * 2)
 	var target_fov = BASE_FOV + FOV_CHANGE * velocity_clamped
 	camera.fov = lerp(camera.fov, target_fov, delta * 8.0)
+	
+	lerp_velocity()
 
 	move_and_slide()
 	
@@ -111,3 +117,19 @@ func _headbob(time) -> Vector3:
 
 func _on_crouch_timer_timeout():
 	can_crouch = true
+	
+func is_still() -> bool:
+	if velocity.x < 0.5 and velocity.x > -0.5 and velocity.z < 0.5 and velocity.z > -0.5:
+		return true
+	else:
+		return false
+		
+func lerp_velocity():
+	if velocity.x < 0.05 and velocity.x > -0.05:
+		velocity.x = 0.0
+		
+	if velocity.z < 0.05 and velocity.z > -0.05:
+		velocity.z = 0.0
+		
+func can_powerslide() -> bool:
+	return true

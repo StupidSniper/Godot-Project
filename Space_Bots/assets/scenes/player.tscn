@@ -63,6 +63,9 @@ wait_time = 0.25
 [node name="player_walk_particles" parent="." instance=ExtResource("4_vkvxf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.979609, 0)
 
+[node name="Slide Check" type="RayCast3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, -1, 0)
+
 [connection signal="timeout" from="Head/Camera3D/Shooting Object/Firerate" to="Head/Camera3D/Shooting Object" method="_on_firerate_timeout"]
 [connection signal="timeout" from="Head/Camera3D/Shooting Object/Reload Timer" to="Head/Camera3D/Shooting Object" method="_on_reload_timer_timeout"]
 [connection signal="timeout" from="Crouch Timer" to="." method="_on_crouch_timer_timeout"]

@@ -52,9 +52,9 @@ func _physics_process(delta):
 		velocity.y -= gravity * delta
 		falling = true
 	
-	if falling and is_on_floor() and sliding:
-		slide_speed += fall_distance / 10
-	fall_distance = gravity
+	if falling and !is_on_floor() and sliding:
+		slide_speed += fall_distance / 100
+	fall_distance = 9.8
 	# Handle jump.
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
@@ -79,7 +79,11 @@ func _physics_process(delta):
 	if Input.is_action_pressed("crouch") and is_on_floor() and can_crouch and can_slide:
 		if Input.is_action_pressed("up") or Input.is_action_pressed("left") or  Input.is_action_pressed("right"):
 			slide()
-		
+	else:
+		if Input.is_action_pressed("sprint"):
+			speed = SPRINT_SPEED
+		else:
+			speed = WALK_SPEED
 	if Input.is_action_just_released("crouch"):
 		can_slide = false
 		sliding = false
@@ -151,15 +155,15 @@ func slide():
 	if not sliding:
 		if is_on_floor() or get_floor_angle() < 0.2:
 			slide_speed = 5
-			slide_speed += fall_distance / 10
+			slide_speed += fall_distance / 100
 		else:
 			slide_speed = 2
 	sliding = true
 	
 	if is_on_floor():
-		slide_speed += get_floor_angle() / 10
+		slide_speed += get_floor_angle() / 100
 	else:
-		slide_speed -= get_floor_angle() / 5 + 0.03
+		slide_speed -= get_floor_angle() / 50 + 0.03
 		
 	if slide_speed < 0:
 		slide_speed = 0

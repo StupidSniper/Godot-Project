@@ -1,20 +1,20 @@
 extends CharacterBody3D
 
 #basic movement consts
-const SPRINT_SPEED = 4.5
+const SPRINT_SPEED = 2
 const SLIDE_BOOST = 1
 const WALLRUN_BOOST = 1
 const JUMP_FORCE = 4.5
 
 #mouse consts
 const MOUSE_SENS = 0.005
-const MOUSE_CLAMP = Vector2(-30, 60)
+const MOUSE_CLAMP = Vector2(-50, 60)
 
 #gravity consts
 const GRAVITY = 9.8
 
 #crouch consts
-const CROUCH_SPEED = -2
+const CROUCH_SPEED = -5
 const CROUCH_HEIGHT = .7
 
 #crouch lerp consts
@@ -26,13 +26,15 @@ const CROUCH_LERP_WEIGHT = 10
 #camera roation head/camera reference
 @onready var head = $Head
 @onready var camera = $Head/Camera3D
+@onready var player_walk_part = $player_walk_particles
 
 #walk consts
-const WALK_SPEED = 10
+const WALK_SPEED = 8
 const WALK_HEIGHT = 1.0
 
 #walk lerp consts
 const MOVE_LERP_WEIGHT = 10
+const AIR_LERP_WEIGHT = 3
 
 #runtime variables
 
@@ -61,6 +63,8 @@ func _ready():
 #mouse inputs
 func _unhandled_input(event):
 	
+	
+	
 	#locking mouse
 	if event is InputEventMouseButton:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -78,21 +82,48 @@ func _unhandled_input(event):
 	camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(MOUSE_CLAMP.x), deg_to_rad(MOUSE_CLAMP.y))
 
 func _physics_process(delta):
+	speed = WALK_SPEED
 	#getting input
 	var input_vec = Input.get_vector("left", "right", "up", "down")
-	input_vec3 = Vector3(input_vec.x, 0, input_vec.y).normalized()
+	input_vec3 = Vector3(input_vec.x, 0, input_vec.y)
+	
+	
+	#camera rotation movement stuff
+	input_vec3 = (head.transform.basis * input_vec3).normalized()
+	
+	#sprinting
+	if Input.is_action_pressed("sprint"):
+		speed += SPRINT_SPEED
 	
 	#crouch input
 	if Input.is_action_pressed("crouch"):
 		is_crouched = true
 	else:
 		is_crouched = false
+	
+	#crouch speed movement penelty
+	if is_crouched:
+		speed += CROUCH_SPEED
 		
 	#calling the crouch function with the least amount of spagetti as possible
 	crouch(delta)
 	
 	#getting the horizontal movement through interpolation
-	horizontal_movement_vec = lerp(horizontal_movement_vec, input_vec3 * Vector3(WALK_SPEED, 0, WALK_SPEED), MOVE_LERP_WEIGHT * delta)
+	if is_on_floor():
+		horizontal_movement_vec = lerp(horizontal_movement_vec, input_vec3 * Vector3(speed, 0, speed), MOVE_LERP_WEIGHT * delta)
+	
+	#reducing control if in the air
+	if not is_on_floor():
+		horizontal_movement_vec = lerp(horizontal_movement_vec, input_vec3 * Vector3(speed, 0, speed), AIR_LERP_WEIGHT * delta)
+	
+	
+	if not is_on_floor() or not moving():
+		#disable player walk particles
+		player_walk_part.emitting = false
+	else:
+		#enable player walk particles
+		player_walk_part.emitting = true
+	
 	
 	#jumping
 	if Input.is_action_pressed("jump") and is_on_floor():
@@ -105,8 +136,7 @@ func _physics_process(delta):
 	#making the movement vector
 	movement_vector = horizontal_movement_vec + vertical_movement_vec
 	
-	#camera rotation movement stuff
-	movement_vector = (head.transform.basis * movement_vector)
+	
 	
 	#setting velocity to the movement vector
 	velocity = movement_vector
@@ -124,3 +154,11 @@ func crouch(delta):
 		scale.y = lerp(scale.y, WALK_HEIGHT, CROUCH_LERP_WEIGHT * delta)
 		if scale.y >= (WALK_HEIGHT - 0.01):
 			scale.y = 1
+	
+	
+	
+func moving() -> bool:
+	if velocity.length() <= 0.5 and velocity.length() >= -0.5:
+		return false
+	else:
+		return true

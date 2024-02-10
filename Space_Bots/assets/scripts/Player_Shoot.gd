@@ -8,7 +8,8 @@ var is_reloading = false
 
 var bullet_count
 const MAX_BULLETS = 6
-const RELOAD_SPEED = 1.5
+const RELOAD_SPEED = 1
+
 
 var auto_reload = true
 
@@ -18,6 +19,9 @@ var auto_reload = true
 @onready var head = $"../.."
 @onready var camera = $".."
 @onready var reload_timer = $"Reload Timer"
+@onready var cam_holder = $"../.."
+@onready var animation = $"../../../../AnimationPlayer"
+@onready var gun_holder = $"Gun Holder"
 
 var bullet_decal = preload("res://assets/scenes/bullet_decal.tscn")
 var bullet_part = preload("res://assets/scenes/bullet_particle.tscn")
@@ -28,12 +32,10 @@ func _ready():
 	reload_timer.wait_time = RELOAD_SPEED
 
 func _physics_process(delta):
-	
 	if Input.is_action_pressed("use") && can_shoot && bullet_count > 0:
 		can_shoot = false
 		timer.start()
 		shoot()
-		print(bullet_count)
 		
 	if auto_reload and bullet_count <= 0 && not is_reloading:
 		reload()
@@ -48,6 +50,8 @@ func _on_firerate_timeout():
 
 func shoot():
 	bullet_count -= 1
+	cam_holder.recoil()
+	animation.play("Gun Shoot")
 	if raycast.is_colliding():
 		var col_point = raycast.get_collision_point()
 		var normal = raycast.get_collision_normal()
@@ -59,7 +63,8 @@ func shoot():
 				
 			if !target.is_in_group("Enemy") && !target.has_method("enemy_hit"):
 				hit_non_enemy(damage, col_point, normal, target)
-				
+
+
 func hit_enemy(damage, col_point, normal, target):
 	target.enemy_hit(damage)
 	
@@ -69,7 +74,8 @@ func hit_enemy(damage, col_point, normal, target):
 	
 	enemy_part_instantiate.look_at(col_point + normal, Vector3.UP)
 	enemy_part_instantiate.look_at(col_point + normal, Vector3.RIGHT)
-	
+
+
 func hit_non_enemy(damage, col_point, normal, target):
 	var bullet_part_instantiate = bullet_part.instantiate()
 	var bullet_decal_instantiate = bullet_decal.instantiate()
@@ -89,9 +95,9 @@ func hit_non_enemy(damage, col_point, normal, target):
 
 func reload():
 	reload_timer.start()
+	animation.play("Gun Reload")
 
 
 func _on_reload_timer_timeout():
 	bullet_count = MAX_BULLETS
-	print("reloaded")
 	is_reloading = false

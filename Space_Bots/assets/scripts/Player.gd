@@ -20,17 +20,31 @@ const CROUCH_HEIGHT = .7
 #crouch lerp consts
 const CROUCH_LERP_WEIGHT = 10
 
+#headbob consts
+const BOB_AMP = 0.04
+const BOB_FREQ = 2.0
+var t_bob = 0.0
+
 #crouch timer reference
 @onready var crouch_timer = $"Crouch Timer"
-
-#camera roation head/camera reference
 @onready var head = $Head
-@onready var camera = $Head/Camera3D
+@onready var camera = $"Head/Cam Holder/Camera3D"
 @onready var player_walk_part = $player_walk_particles
+@onready var cam_holder = $"Head/Cam Holder"
+@onready var gun_holder = $"Head/Cam Holder/Camera3D/Shooting Object/Gun Holder"
 
 #walk consts
 const WALK_SPEED = 8
 const WALK_HEIGHT = 1.0
+
+#camera tilt consts
+const CAMERA_TILT = 0.05
+const CAMERA_LERP_WEIGHT = 5
+
+#weapon sway consts
+const DEFAULT_WEAPON_POS = Vector3(0.5, -0.33, -0.5)
+const WEAPON_SWAY_AMOUNT = 0.02
+const WEAPON_SWAY_WEIGHT = 10
 
 #walk lerp consts
 const MOVE_LERP_WEIGHT = 10
@@ -46,6 +60,10 @@ var movement_vector = Vector3()
 var horizontal_movement_vec = Vector3()
 var vertical_movement_vec = Vector3()
 var jump_vec = Vector3()
+var camera_roation_vec = Vector3()
+var gun_roation_vec = Vector3()
+
+var mouse_input = Vector2()
 
 #runtime bools for player states
 var is_crouched = false
@@ -73,11 +91,13 @@ func _unhandled_input(event):
 		if event is InputEventMouseMotion:
 			head.rotate_y(-event.relative.x * MOUSE_SENS)
 			camera.rotate_x(-event.relative.y * MOUSE_SENS)
+			mouse_input = event.relative
 	
 	#clamping camera roation
 	camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(MOUSE_CLAMP.x), deg_to_rad(MOUSE_CLAMP.y))
 
 func _physics_process(delta):
+	t_bob += delta * velocity.length() * float(is_on_floor())
 	speed = WALK_SPEED
 	#getting input
 	var input_vec = Input.get_vector("left", "right", "up", "down")
@@ -103,7 +123,6 @@ func _physics_process(delta):
 		jump_vec.y = JUMP_FORCE
 	else:
 		jump_vec.y = 0
-	
 	
 	#crouch speed movement penelty
 	if is_crouched:
@@ -147,7 +166,11 @@ func _physics_process(delta):
 	velocity = movement_vector
 	
 	move_and_slide()
-	
+	camera_tilt(input_vec, delta)
+	gun_tilt(input_vec, delta)
+	weapon_sway(delta)
+	headbob()
+	gunbob()
 
 #crouch lerp handling
 func crouch(delta):
@@ -160,8 +183,33 @@ func crouch(delta):
 		scale.y = lerp(scale.y, WALK_HEIGHT, CROUCH_LERP_WEIGHT * delta)
 		if scale.y >= (WALK_HEIGHT - 0.01):
 			scale.y = 1
-			
 
+func camera_tilt(input_vec, delta):
+	#camera tilt
+	camera_roation_vec.z = lerpf(camera.rotation.z, -input_vec.x * CAMERA_TILT, CAMERA_LERP_WEIGHT * delta)
+	camera.rotation.z = camera_roation_vec.z
+
+#gun tiltcamera_roation_vec
+func gun_tilt(input_vec, delta):
+	gun_roation_vec.z = lerpf(camera.rotation.z, -input_vec.x * CAMERA_TILT, (CAMERA_LERP_WEIGHT + 5) * delta)
+	gun_holder.rotation.z = gun_roation_vec.z
+
+#weapon sway
+func weapon_sway(delta):
+	mouse_input = lerp(mouse_input, Vector2.ZERO, 10 * delta)
+	gun_holder.rotation.x = lerp(gun_holder.rotation.x, mouse_input.y * WEAPON_SWAY_AMOUNT * -1, WEAPON_SWAY_WEIGHT * delta)
+	gun_holder.rotation.y = lerp(gun_holder.rotation.y, mouse_input.x * WEAPON_SWAY_AMOUNT * -1, WEAPON_SWAY_WEIGHT * delta)
+
+#headbob
+func headbob():
+	if moving():
+		camera.transform.origin.y = sin(t_bob * BOB_FREQ) * BOB_AMP
+		camera.transform.origin.x = cos(t_bob * BOB_FREQ / 2) * BOB_AMP
+
+func gunbob():
+	if moving():
+		gun_holder.transform.origin.y = sin(t_bob * BOB_FREQ) * BOB_AMP / 2 + DEFAULT_WEAPON_POS.y 
+		gun_holder.transform.origin.x = cos(t_bob * BOB_FREQ / 2) * BOB_AMP / 2 + DEFAULT_WEAPON_POS.x
 
 #basic check if player is moving. You need to check if the movement of the player is less than 0._ because of the interpolation movement
 func moving() -> bool:

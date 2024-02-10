@@ -1,3 +1,4 @@
 res://assets/scenes/world.tscn
-res://assets/scripts/Player.gd
+res://assets/scripts/Player_Shoot.gd
 res://assets/scenes/player.tscn
+res://assets/scripts/Recoil.gd

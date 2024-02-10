@@ -14,7 +14,7 @@ const MOUSE_CLAMP = Vector2(-50, 60)
 const GRAVITY = 9.8
 
 #crouch consts
-const CROUCH_SPEED = -5
+const CROUCH_SPEED = -3
 const CROUCH_HEIGHT = .7
 
 #crouch lerp consts
@@ -45,6 +45,7 @@ var input_vec3 = Vector3()
 var movement_vector = Vector3()
 var horizontal_movement_vec = Vector3()
 var vertical_movement_vec = Vector3()
+var jump_vec = Vector3()
 
 #runtime bools for player states
 var is_crouched = false
@@ -56,15 +57,10 @@ var gravity = 9.8
 #runtime speed variable
 var speed = 10
 
-func _ready():
-	pass
-
+var move_lerp_multi = 1
 
 #mouse inputs
 func _unhandled_input(event):
-	
-	
-	
 	#locking mouse
 	if event is InputEventMouseButton:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -101,6 +97,14 @@ func _physics_process(delta):
 	else:
 		is_crouched = false
 	
+	
+	#jumping
+	if Input.is_action_pressed("jump") and is_on_floor():
+		jump_vec.y = JUMP_FORCE
+	else:
+		jump_vec.y = 0
+	
+	
 	#crouch speed movement penelty
 	if is_crouched:
 		speed += CROUCH_SPEED
@@ -110,11 +114,13 @@ func _physics_process(delta):
 	
 	#getting the horizontal movement through interpolation
 	if is_on_floor():
-		horizontal_movement_vec = lerp(horizontal_movement_vec, input_vec3 * Vector3(speed, 0, speed), MOVE_LERP_WEIGHT * delta)
+		horizontal_movement_vec = lerp(horizontal_movement_vec, input_vec3 * Vector3(speed, 0, speed), MOVE_LERP_WEIGHT * move_lerp_multi * delta)
+		#fixing jumping
+		vertical_movement_vec.y = clamp(vertical_movement_vec.y, 0, 10000)
 	
 	#reducing control if in the air
 	if not is_on_floor():
-		horizontal_movement_vec = lerp(horizontal_movement_vec, input_vec3 * Vector3(speed, 0, speed), AIR_LERP_WEIGHT * delta)
+		horizontal_movement_vec = lerp(horizontal_movement_vec, input_vec3 * Vector3(speed, 0, speed), AIR_LERP_WEIGHT * move_lerp_multi * delta)
 	
 	
 	if not is_on_floor() or not moving():
@@ -124,24 +130,24 @@ func _physics_process(delta):
 		#enable player walk particles
 		player_walk_part.emitting = true
 	
-	
-	#jumping
-	if Input.is_action_pressed("jump") and is_on_floor():
-		vertical_movement_vec.y = JUMP_FORCE
-		
 	#gravity
 	if not is_on_floor():
 		vertical_movement_vec.y -= gravity * delta
 	
 	#making the movement vector
+	vertical_movement_vec += jump_vec
 	movement_vector = horizontal_movement_vec + vertical_movement_vec
 	
-	
+	#making the player full stop if its below a specific speed
+	if movement_vector.length() <= 0.005 and movement_vector.length() >= -0.005:
+		movement_vector.x = 0
+		movement_vector.z = 0
 	
 	#setting velocity to the movement vector
 	velocity = movement_vector
 	
 	move_and_slide()
+	
 
 #crouch lerp handling
 func crouch(delta):
@@ -154,9 +160,10 @@ func crouch(delta):
 		scale.y = lerp(scale.y, WALK_HEIGHT, CROUCH_LERP_WEIGHT * delta)
 		if scale.y >= (WALK_HEIGHT - 0.01):
 			scale.y = 1
-	
-	
-	
+			
+
+
+#basic check if player is moving. You need to check if the movement of the player is less than 0._ because of the interpolation movement
 func moving() -> bool:
 	if velocity.length() <= 0.5 and velocity.length() >= -0.5:
 		return false
